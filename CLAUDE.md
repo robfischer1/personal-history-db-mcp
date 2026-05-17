@@ -7,7 +7,7 @@ MCP server plugin for `personal-history-db`. Exposes the phdb query layer as Cla
 ```bash
 cd personal-history-db-mcp/
 uv venv && uv pip install -e ".[dev]"
-# Also need phdb available — install from sibling:
+# For local development against a sibling checkout (overrides the git source):
 uv pip install -e "../personal-history-db"
 ```
 

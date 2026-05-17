@@ -35,7 +35,7 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM"]
 ignore = ["E501"]
 
 [tool.uv.sources]
-personal-history-db = { path = "../personal-history-db", editable = true }
+personal-history-db = { git = "https://github.com/robfischer1/personal-history-db.git", tag = "v0.2.0" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
