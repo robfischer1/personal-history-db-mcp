@@ -444,7 +444,7 @@ wheels = [
 [[package]]
 name = "personal-history-db"
 version = "0.2.0"
-source = { editable = "../personal-history-db" }
+source = { git = "https://github.com/robfischer1/personal-history-db.git?tag=v0.2.0#f08ba9cf492fd96ec2e0d0ecf42d7c30a950a04f" }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "click" },
@@ -454,24 +454,6 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "sqlite-vec" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "beautifulsoup4", specifier = ">=4.12" },
-    { name = "click", specifier = ">=8.1" },
-    { name = "html2text", specifier = ">=2024.2" },
-    { name = "lxml", specifier = ">=5.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
-    { name = "openpyxl", marker = "extra == 'docs'", specifier = ">=3.1" },
-    { name = "pydantic", specifier = ">=2.0" },
-    { name = "pydantic-settings", specifier = ">=2.0" },
-    { name = "pypdf", marker = "extra == 'docs'", specifier = ">=4.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
-    { name = "python-docx", marker = "extra == 'docs'", specifier = ">=1.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4" },
-    { name = "sqlite-vec", specifier = ">=0.1" },
-]
-provides-extras = ["docs", "dev"]
 
 [[package]]
 name = "personal-history-db-mcp"
@@ -491,7 +473,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "mcp", specifier = ">=1.2.0" },
-    { name = "personal-history-db", editable = "../personal-history-db" },
+    { name = "personal-history-db", git = "https://github.com/robfischer1/personal-history-db.git?tag=v0.2.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4" },
 ]
