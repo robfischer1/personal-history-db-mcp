@@ -13,15 +13,20 @@ Config resolution (highest priority first):
 Embedding config comes from instance TOML when PHDB_INSTANCE_DIR is set,
 with OLLAMA_URL / OLLAMA_MODEL env vars as overrides.
 
-    DEFAULT_SINCE         baseline date filter for hybrid search (default: 2018)
+    DEFAULT_SINCE         baseline date filter for hybrid search
+                          (default: _DEFAULT_SINCE_YEAR)
+
+Installation-specific defaults (port, model, DB filename) are extracted to
+module-level constants (_DEFAULT_*) so they are documented and overridable.
 """
 from __future__ import annotations
 
 import contextlib
 import os
+import sqlite3
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast  # VERIFY: phdb lacks typed stubs; cast needed until py.typed ships
 
 from mcp.server.fastmcp import FastMCP
 from phdb.db import connect_persistent
@@ -61,6 +66,15 @@ from phdb.query import (
 )
 from phdb.scoring import record_engagement
 
+# ---------------------------------------------------------------------------
+# Defaults — named constants for values that vary per installation.
+# Each is overridable via env var (see _resolve_config docstring).
+# ---------------------------------------------------------------------------
+_DEFAULT_DB_FILENAME = "personal-history.db"
+_DEFAULT_EMBED_URL = "http://localhost:11434"
+_DEFAULT_EMBED_MODEL = "nomic-embed-text"
+_DEFAULT_SINCE_YEAR = "2018"
+
 
 # ---------------------------------------------------------------------------
 # Config
@@ -88,14 +102,14 @@ def _resolve_config() -> tuple[Path, str, str]:
         db_path = Path(p)
 
     return (
-        db_path or Path("personal-history.db"),
-        embed_url or "http://localhost:11434",
-        embed_model or "nomic-embed-text",
+        db_path or Path(_DEFAULT_DB_FILENAME),
+        embed_url or _DEFAULT_EMBED_URL,
+        embed_model or _DEFAULT_EMBED_MODEL,
     )
 
 
 DB_PATH, OLLAMA_URL, OLLAMA_MODEL = _resolve_config()
-DEFAULT_SINCE = os.environ.get("DEFAULT_SINCE", "2018")
+DEFAULT_SINCE = os.environ.get("DEFAULT_SINCE", _DEFAULT_SINCE_YEAR)
 
 # ---------------------------------------------------------------------------
 # Shared state (lazy-init)
@@ -104,7 +118,7 @@ _conn = None
 _embed: EmbedClient | None = None
 
 
-def _get_conn():
+def _get_conn() -> sqlite3.Connection:
     global _conn
     if _conn is None:
         if not DB_PATH.exists():
@@ -112,7 +126,7 @@ def _get_conn():
                 f"Personal History DB not found at {DB_PATH}. "
                 f"Set PHDB_DB_PATH or PHDB_INSTANCE_DIR env var."
             )
-        _conn = connect_persistent(DB_PATH, load_vec=True)
+        _conn = cast(sqlite3.Connection, connect_persistent(DB_PATH, load_vec=True))
     return _conn
 
 
@@ -160,7 +174,7 @@ def search(
 
     embed_client = _get_embed() if mode in ("hybrid", "semantic") else None
 
-    return _search(
+    return cast(dict[str, Any], _search(
         _get_conn(),
         query,
         embed_client=embed_client,
@@ -171,7 +185,7 @@ def search(
         mode=mode,
         include_bulk=include_bulk,
         include_meta=include_meta,
-    )
+    ))
 
 
 @mcp.tool()
@@ -184,11 +198,11 @@ def get_message(msg_id: int, include_recipients: bool = True,
         include_recipients: If True, include to/cc/bcc list.
         include_attachments: If True, include attachment metadata.
     """
-    return _get_message(
+    return cast(dict[str, Any], _get_message(
         _get_conn(), msg_id,
         include_recipients=include_recipients,
         include_attachments=include_attachments,
-    )
+    ))
 
 
 @mcp.tool()
@@ -203,7 +217,7 @@ def get_chunk(doc_id: int) -> dict[str, Any]:
     if "error" not in result:
         with contextlib.suppress(Exception):
             record_engagement(conn, doc_id, "read", source="mcp")
-    return result
+    return cast(dict[str, Any], result)
 
 
 @mcp.tool()
@@ -215,12 +229,12 @@ def get_thread(thread_id: str | None = None,
     Provide either thread_id (gmail_thread_id) OR msg_id (we'll resolve its
     thread). Returns lightweight rows (no full body).
     """
-    return _get_thread(
+    return cast(dict[str, Any], _get_thread(
         _get_conn(),
         thread_id=thread_id,
         msg_id=msg_id,
         max_messages=max_messages,
-    )
+    ))
 
 
 @mcp.tool()
@@ -230,13 +244,13 @@ def list_sources() -> dict[str, Any]:
     Returns counts grouped by source organization, file kind, and document
     source_table.
     """
-    return _list_sources(_get_conn())
+    return cast(dict[str, Any], _list_sources(_get_conn()))
 
 
 @mcp.tool()
 def corpus_stats(since: str | None = None, until: str | None = None) -> dict[str, Any]:
     """Year distribution + direction/sender breakdowns of the messages table."""
-    return _corpus_stats(_get_conn(), since=since, until=until)
+    return cast(dict[str, Any], _corpus_stats(_get_conn(), since=since, until=until))
 
 
 @mcp.tool()
@@ -245,7 +259,7 @@ def nearest_neighbors(doc_id: int, k: int = 10) -> dict[str, Any]:
 
     Pulls the chunk's embedding and queries vec0 for nearest neighbors.
     """
-    return _nearest_neighbors(_get_conn(), doc_id, k=k)
+    return cast(dict[str, Any], _nearest_neighbors(_get_conn(), doc_id, k=k))
 
 
 @mcp.tool()
@@ -253,7 +267,7 @@ def server_info() -> dict[str, Any]:
     """Diagnostic: where is the DB, what's its size, is Ollama reachable, what's embedded."""
     info = _server_info(DB_PATH, _get_conn(), embed_client=_get_embed())
     info["default_since"] = DEFAULT_SINCE
-    return info
+    return cast(dict[str, Any], info)
 
 
 @mcp.tool()
@@ -277,11 +291,11 @@ def find_messages_by_participant(
         limit: Max messages returned (default 50).
         include_bulk: If False (default), filters out is_bulk=1.
     """
-    return _find_messages_by_participant(
+    return cast(dict[str, Any], _find_messages_by_participant(
         _get_conn(), participant,
         role=role, direction=direction, since=since, until=until,
         limit=limit, include_bulk=include_bulk,
-    )
+    ))
 
 
 @mcp.tool()
@@ -299,10 +313,10 @@ def find_threads(
         until: Filter on threads.date_first <= until.
         limit: Max threads returned (default 30).
     """
-    return _find_threads_by_subject(
+    return cast(dict[str, Any], _find_threads_by_subject(
         _get_conn(), query,
         since=since, until=until, limit=limit,
-    )
+    ))
 
 
 @mcp.tool()
@@ -324,11 +338,11 @@ def top_correspondents(
         exclude_bulk: Drop is_bulk=1 (default True).
         exclude_self: Drop direction='self' (default True).
     """
-    return _top_correspondents(
+    return cast(dict[str, Any], _top_correspondents(
         _get_conn(),
         since=since, until=until, role=role, limit=limit,
         exclude_bulk=exclude_bulk, exclude_self=exclude_self,
-    )
+    ))
 
 
 @mcp.tool()
